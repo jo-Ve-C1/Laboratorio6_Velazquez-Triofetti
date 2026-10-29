@@ -33,6 +33,7 @@ def obtener_coeficientes():
     except ValueError:
         messagebox.showerror("Error", "Ingrese coeficientes numéricos válidos.")
         return None
+    
 def calcular_raiz():
     coefs = obtener_coeficientes()
     if coefs is None: return
@@ -110,16 +111,25 @@ def calcular_raiz():
     except Exception as e:
         messagebox.showerror("Error", f"Fallo: {e}")
 
+def calcular_derivada():
+    coefs = obtener_coeficientes()
+    if coefs is None: return
+    try:
+        x0 = float(entry_x0_der.get().replace(",", "."))
+        h = float(entry_h_der.get().replace(",", "."))
+        # Diferencia finita centrada[cite: 108]
+        df_num = (eval_polinomio(coefs, x0 + h) - eval_polinomio(coefs, x0 - h)) / (2 * h)
+        res_der.config(state="normal"); res_der.delete(0, END); res_der.insert(0, f"{df_num:.6f}"); res_der.config(state="readonly")
+    except ValueError:
+        messagebox.showerror("Error", "Verifique los valores de x0 y dx.")
+
 def cargar_valores_prueba():
     vals_coefs = [0, 1, 0, -8, 0, 82, -25]
     for e, v in zip(entries_coefs, vals_coefs):
         e.delete(0, END); e.insert(0, str(v))
-    entry_xl.delete(0, END); entry_xl.insert(0, "0")
-    entry_xu.delete(0, END); entry_xu.insert(0, "1")
-    entry_es.delete(0, END); entry_es.insert(0, "0.5")
-    entry_cifras.delete(0, END); entry_cifras.insert(0, "4")
-    entry_max_iter.delete(0, END); entry_max_iter.insert(0, "100")
-    
+    entry_x0_der.delete(0, END); entry_x0_der.insert(0, "1")
+    entry_h_der.delete(0, END); entry_h_der.insert(0, "0.1")
+
 def borrar_todo():
     for e in entries_coefs: e.delete(0, END)
 
@@ -171,6 +181,18 @@ Label(frame_raiz, text="ea (%):").grid(row=2, column=5, sticky="e")
 res_ea = Entry(frame_raiz, width=12, state="readonly", justify="center"); res_ea.grid(row=2, column=6)
 Label(frame_raiz, text="f(raíz):").grid(row=3, column=5, sticky="e")
 res_fr = Entry(frame_raiz, width=12, state="readonly", justify="center"); res_fr.grid(row=3, column=6)
+
+# Panel Derivada (Punto 2)
+frame_der = ttk.LabelFrame(raiz, text="Cálculo de la derivada primera (diferencia centrada)[cite: 108, 343]", padding=5)
+frame_der.pack(fill="x", padx=10, pady=5)
+
+Label(frame_der, text="x0:").grid(row=0, column=0)
+entry_x0_der = Entry(frame_der, width=8, justify="center"); entry_x0_der.grid(row=0, column=1)
+Label(frame_der, text="dx:").grid(row=0, column=2)
+entry_h_der = Entry(frame_der, width=8, justify="center"); entry_h_der.grid(row=0, column=3)
+Button(frame_der, text="Calcular", command=calcular_derivada, width=10).grid(row=0, column=4, padx=15)
+Label(frame_der, text="Derivada f'(x0):").grid(row=0, column=5)
+res_der = Entry(frame_der, width=14, state="readonly", justify="center"); res_der.grid(row=0, column=6)
 
 cargar_valores_prueba()
 raiz.mainloop()
