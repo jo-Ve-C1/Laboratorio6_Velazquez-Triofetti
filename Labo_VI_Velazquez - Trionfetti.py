@@ -60,8 +60,6 @@ def resolver_gauss(A, b, con_pivoteo):
 
     return x
 
-# --- LÓGICA DE CONEXIÓN (Va con tus otras funciones como calcular_raiz) ---
-
 def calcular_sistema():
     try:
         # GUI 1: Lectura de la matriz A (4x4) y vector b (4)
@@ -287,7 +285,6 @@ Button(frame_der, text="Calcular", command=calcular_derivada, width=10).grid(row
 Label(frame_der, text="Derivada f'(x0):").grid(row=0, column=5)
 res_der = Entry(frame_der, width=14, state="readonly", justify="center"); res_der.grid(row=0, column=6)
 
-# --- DIBUJO DE LA INTERFAZ (Va en tu bloque # --- VENTANA PRINCIPAL ---) ---
 
 frame_sis = ttk.LabelFrame(raiz, text="Resolución de un sistema de 4 ecuaciones (eliminación gaussiana)", padding=5)
 frame_sis.pack(fill="x", padx=10, pady=5)
