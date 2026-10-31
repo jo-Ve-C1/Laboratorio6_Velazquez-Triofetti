@@ -20,6 +20,99 @@ def eval_polinomio(coefs, x):
         res += c * (x ** grado)
     return res
 
+import numpy as np
+
+#resolver el sistema de ecuaciones
+def resolver_gauss(A, b, con_pivoteo):
+    """
+    Resuelve el sistema Ax = b.
+    A: matriz de coeficientes (4x4)
+    b: vector de términos independientes (4)
+    """
+    n = len(b)
+    # MATEMÁTICA 1: Matriz ampliada. 
+    # Unimos la matriz A y el vector b para operar filas enteras a la vez.
+    Ab = np.column_stack((np.array(A, dtype=float), np.array(b, dtype=float)))
+
+    # MATEMÁTICA 2: Eliminación hacia adelante (Triangulación)
+    for i in range(n):
+        if con_pivoteo:
+            # Busca el mayor valor absoluto en la columna actual (hacia abajo)
+            fila_max = np.argmax(np.abs(Ab[i:n, i])) + i
+            if i != fila_max:
+                # Intercambia la fila actual por la fila con el pivote mayor
+                Ab[[i, fila_max]] = Ab[[fila_max, i]]
+
+        # Requisito de la consigna: Detectar pivote nulo sin mostrar resultados inválidos
+        if Ab[i, i] == 0:
+            raise ValueError(f"Pivote nulo detectado en la columna {i+1}. El método sin pivoteo falla para este sistema.")
+
+        # Hacer ceros por debajo del pivote actual
+        for j in range(i+1, n):
+            factor = Ab[j, i] / Ab[i, i]
+            Ab[j, i:] -= factor * Ab[i, i:]
+
+    # MATEMÁTICA 3: Sustitución hacia atrás
+    # Empezamos desde la última ecuación (x4) y despejamos hacia arriba hasta x1
+    x = np.zeros(n)
+    for i in range(n-1, -1, -1):
+        x[i] = (Ab[i, n] - np.dot(Ab[i, i+1:n], x[i+1:n])) / Ab[i, i]
+
+    return x
+
+# --- LÓGICA DE CONEXIÓN (Va con tus otras funciones como calcular_raiz) ---
+
+def calcular_sistema():
+    try:
+        # GUI 1: Lectura de la matriz A (4x4) y vector b (4)
+        A = []
+        for fila in entries_A:
+            # Lee cada cuadrito, cambia comas por puntos y lo convierte a número
+            fila_numeros = [float(e.get().replace(",", ".")) for e in fila]
+            A.append(fila_numeros)
+            
+        b = [float(e.get().replace(",", ".")) for e in entries_b]
+        
+        # GUI 2: Verifica qué radiobutton está seleccionado
+        usa_pivoteo = var_pivoteo.get() == "Con"
+        
+        # Llama a la función matemática
+        solucion = resolver_gauss(A, b, usa_pivoteo)
+        
+        # GUI 3: Muestra los resultados en los campos correspondientes
+        for i in range(4):
+            entries_x[i].config(state="normal")
+            entries_x[i].delete(0, END)
+            entries_x[i].insert(0, f"{solucion[i]:.4f}")
+            entries_x[i].config(state="readonly")
+            
+    except ValueError as err:
+        # Captura el error del pivote nulo o si dejaron celdas vacías
+        messagebox.showerror("Error de Cálculo", str(err))
+    except Exception as e:
+        messagebox.showerror("Error", f"Ocurrió un error inesperado: {e}")
+
+def cargar_prueba_sistema():
+    # Sistema predeterminado de la consigna
+    prueba_A = [[2, 2, 1, -1], [2, -2, 6, -4], [2, 2, 1, 1], [1, 5, -4, -2]]
+    prueba_b = [5, 0, 13, -9]
+    
+    for i in range(4):
+        for j in range(4):
+            entries_A[i][j].delete(0, END)
+            entries_A[i][j].insert(0, str(prueba_A[i][j]))
+        entries_b[i].delete(0, END)
+        entries_b[i].insert(0, str(prueba_b[i]))
+
+def borrar_sistema():
+    for fila in entries_A:
+        for e in fila: e.delete(0, END)
+    for e in entries_b: e.delete(0, END)
+    for e in entries_x:
+        e.config(state="normal"); e.delete(0, END); e.config(state="readonly")
+
+
+
 def eval_derivada_analitica(coefs, x):
     res = 0.0
     for i, c in enumerate(coefs[:-1]):
@@ -193,6 +286,55 @@ entry_h_der = Entry(frame_der, width=8, justify="center"); entry_h_der.grid(row=
 Button(frame_der, text="Calcular", command=calcular_derivada, width=10).grid(row=0, column=4, padx=15)
 Label(frame_der, text="Derivada f'(x0):").grid(row=0, column=5)
 res_der = Entry(frame_der, width=14, state="readonly", justify="center"); res_der.grid(row=0, column=6)
+
+# --- DIBUJO DE LA INTERFAZ (Va en tu bloque # --- VENTANA PRINCIPAL ---) ---
+
+frame_sis = ttk.LabelFrame(raiz, text="Resolución de un sistema de 4 ecuaciones (eliminación gaussiana)", padding=5)
+frame_sis.pack(fill="x", padx=10, pady=5)
+
+entries_A = []
+entries_b = []
+entries_x = []
+
+#cabeceras (x1, x2, x3, x4, b)
+for col, texto in enumerate(["x1", "x2", "x3", "x4", "b"]):
+    Label(frame_sis, text=texto).grid(row=0, column=col, padx=5)
+
+#generacion de la grilla 4x4 para A y la columna para b
+for i in range(4):
+    fila_entradas = []
+    for j in range(4):
+        e = Entry(frame_sis, width=6, justify="center")
+        e.grid(row=i+1, column=j, padx=5, pady=2)
+        fila_entradas.append(e)
+    entries_A.append(fila_entradas)
+    
+    #vector b
+    eb = Entry(frame_sis, width=6, justify="center")
+    eb.grid(row=i+1, column=4, padx=5, pady=2)
+    entries_b.append(eb)
+
+#panel derecho: radiobuttons, botones y resultados
+frame_controles = Frame(frame_sis)
+frame_controles.grid(row=1, column=5, rowspan=4, padx=15)
+
+var_pivoteo = StringVar(value="Sin")
+Radiobutton(frame_controles, text="Sin pivoteo", variable=var_pivoteo, value="Sin").pack(anchor="w")
+Radiobutton(frame_controles, text="Con pivoteo parcial", variable=var_pivoteo, value="Con").pack(anchor="w")
+
+Button(frame_controles, text="Calcular", command=calcular_sistema, width=15).pack(pady=2)
+Button(frame_controles, text="Borrar", command=borrar_sistema, width=15).pack(pady=2)
+Button(frame_controles, text="Valores de prueba", command=cargar_prueba_sistema, width=15).pack(pady=2)
+
+frame_resultados = Frame(frame_sis)
+frame_resultados.grid(row=1, column=6, rowspan=4, padx=10)
+
+for i in range(4):
+    Label(frame_resultados, text=f"x{i+1} =").grid(row=i, column=0, sticky="e")
+    ex = Entry(frame_resultados, width=10, state="readonly", justify="center")
+    ex.grid(row=i, column=1, pady=2)
+    entries_x.append(ex)
+
 
 cargar_valores_prueba()
 raiz.mainloop()
