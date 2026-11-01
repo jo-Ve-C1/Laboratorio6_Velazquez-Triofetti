@@ -109,7 +109,46 @@ def borrar_sistema():
     for e in entries_x:
         e.config(state="normal"); e.delete(0, END); e.config(state="readonly")
 
+def calcular_integral_simpson(coefs, a, b, n):
+    
+    h = (b - a) / n
+    suma_impares = 0.0
+    suma_pares = 0.0
+    
+    for i in range(1, n):
+        x_actual = a + i * h
+        if i % 2 == 0:
+            suma_pares += eval_polinomio(coefs, x_actual)
+        else:
+            suma_impares += eval_polinomio(coefs, x_actual)
+            
+    # Fórmula de Simpson 1/3 compuesta
+    integral = (h / 3) * (eval_polinomio(coefs, a) + 4 * suma_impares + 2 * suma_pares + eval_polinomio(coefs, b))
+    return integral
 
+def calcular_integral():
+    coefs = obtener_coeficientes()
+    if coefs is None: return
+    
+    try:
+        a = float(entry_a.get().replace(",", "."))
+        b = float(entry_b.get().replace(",", "."))
+        n = int(entry_n.get())
+        
+        # Validación obligatoria: n debe ser par y mayor a 0
+        if n <= 0 or n % 2 != 0:
+            messagebox.showerror("Error", "La cantidad de subintervalos (n) debe ser un número par positivo.")
+            return
+            
+        resultado = calcular_integral_simpson(coefs, a, b, n)
+        
+        res_integral.config(state="normal")
+        res_integral.delete(0, END)
+        res_integral.insert(0, f"{resultado:.6f}")
+        res_integral.config(state="readonly")
+        
+    except ValueError:
+        messagebox.showerror("Error", "Verifique que los límites a, b y la cantidad n sean numéricos.")
 
 def eval_derivada_analitica(coefs, x):
     res = 0.0
@@ -220,6 +259,9 @@ def cargar_valores_prueba():
         e.delete(0, END); e.insert(0, str(v))
     entry_x0_der.delete(0, END); entry_x0_der.insert(0, "1")
     entry_h_der.delete(0, END); entry_h_der.insert(0, "0.1")
+    entry_a.delete(0, END); entry_a.insert(0, "0")
+    entry_b.delete(0, END); entry_b.insert(0, "2")
+    entry_n.delete(0, END); entry_n.insert(0, "2")
 
 def borrar_todo():
     for e in entries_coefs: e.delete(0, END)
@@ -332,6 +374,27 @@ for i in range(4):
     ex.grid(row=i, column=1, pady=2)
     entries_x.append(ex)
 
+# Panel Integral (Punto 4)
+frame_int = ttk.LabelFrame(raiz, text="Cálculo de la integral definida (Simpson 1/3 compuesta)", padding=5)
+frame_int.pack(fill="x", padx=10, pady=5)
+
+Label(frame_int, text="Intervalo de integración:  a:").grid(row=0, column=0, padx=5)
+entry_a = Entry(frame_int, width=8, justify="center")
+entry_a.grid(row=0, column=1, padx=5)
+
+Label(frame_int, text="b:").grid(row=0, column=2, padx=5)
+entry_b = Entry(frame_int, width=8, justify="center")
+entry_b.grid(row=0, column=3, padx=5)
+
+Label(frame_int, text="Cantidad de subintervalos (par):").grid(row=1, column=0, columnspan=2, sticky="e", pady=5)
+entry_n = Entry(frame_int, width=8, justify="center")
+entry_n.grid(row=1, column=2, columnspan=2, sticky="w", padx=5)
+
+Button(frame_int, text="Calcular", command=calcular_integral, width=12).grid(row=0, column=4, rowspan=2, padx=30)
+
+Label(frame_int, text="Integral definida:").grid(row=0, column=5, rowspan=2, sticky="e")
+res_integral = Entry(frame_int, width=15, state="readonly", justify="center")
+res_integral.grid(row=0, column=6, rowspan=2, padx=5)
 
 cargar_valores_prueba()
 raiz.mainloop()
