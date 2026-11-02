@@ -20,6 +20,136 @@ def eval_polinomio(coefs, x):
         res += c * (x ** grado)
     return res
 
+import numpy as np
+
+#resolver el sistema de ecuaciones
+def resolver_gauss(A, b, con_pivoteo):
+    """
+    Resuelve el sistema Ax = b.
+    A: matriz de coeficientes (4x4)
+    b: vector de términos independientes (4)
+    """
+    n = len(b)
+    # MATEMÁTICA 1: Matriz ampliada. 
+    # Unimos la matriz A y el vector b para operar filas enteras a la vez.
+    Ab = np.column_stack((np.array(A, dtype=float), np.array(b, dtype=float)))
+
+    # MATEMÁTICA 2: Eliminación hacia adelante (Triangulación)
+    for i in range(n):
+        if con_pivoteo:
+            # Busca el mayor valor absoluto en la columna actual (hacia abajo)
+            fila_max = np.argmax(np.abs(Ab[i:n, i])) + i
+            if i != fila_max:
+                # Intercambia la fila actual por la fila con el pivote mayor
+                Ab[[i, fila_max]] = Ab[[fila_max, i]]
+
+        # Requisito de la consigna: Detectar pivote nulo sin mostrar resultados inválidos
+        if Ab[i, i] == 0:
+            raise ValueError(f"Pivote nulo detectado en la columna {i+1}. El método sin pivoteo falla para este sistema.")
+
+        # Hacer ceros por debajo del pivote actual
+        for j in range(i+1, n):
+            factor = Ab[j, i] / Ab[i, i]
+            Ab[j, i:] -= factor * Ab[i, i:]
+
+    # MATEMÁTICA 3: Sustitución hacia atrás
+    # Empezamos desde la última ecuación (x4) y despejamos hacia arriba hasta x1
+    x = np.zeros(n)
+    for i in range(n-1, -1, -1):
+        x[i] = (Ab[i, n] - np.dot(Ab[i, i+1:n], x[i+1:n])) / Ab[i, i]
+
+    return x
+
+def calcular_sistema():
+    try:
+        # GUI 1: Lectura de la matriz A (4x4) y vector b (4)
+        A = []
+        for fila in entries_A:
+            # Lee cada cuadrito, cambia comas por puntos y lo convierte a número
+            fila_numeros = [float(e.get().replace(",", ".")) for e in fila]
+            A.append(fila_numeros)
+            
+        b = [float(e.get().replace(",", ".")) for e in entries_b]
+        
+        # GUI 2: Verifica qué radiobutton está seleccionado
+        usa_pivoteo = var_pivoteo.get() == "Con"
+        
+        # Llama a la función matemática
+        solucion = resolver_gauss(A, b, usa_pivoteo)
+        
+        # GUI 3: Muestra los resultados en los campos correspondientes
+        for i in range(4):
+            entries_x[i].config(state="normal")
+            entries_x[i].delete(0, END)
+            entries_x[i].insert(0, f"{solucion[i]:.4f}")
+            entries_x[i].config(state="readonly")
+            
+    except ValueError as err:
+        # Captura el error del pivote nulo o si dejaron celdas vacías
+        messagebox.showerror("Error de Cálculo", str(err))
+    except Exception as e:
+        messagebox.showerror("Error", f"Ocurrió un error inesperado: {e}")
+
+def cargar_prueba_sistema():
+    # Sistema predeterminado de la consigna
+    prueba_A = [[2, 2, 1, -1], [2, -2, 6, -4], [2, 2, 1, 1], [1, 5, -4, -2]]
+    prueba_b = [5, 0, 13, -9]
+    
+    for i in range(4):
+        for j in range(4):
+            entries_A[i][j].delete(0, END)
+            entries_A[i][j].insert(0, str(prueba_A[i][j]))
+        entries_b[i].delete(0, END)
+        entries_b[i].insert(0, str(prueba_b[i]))
+
+def borrar_sistema():
+    for fila in entries_A:
+        for e in fila: e.delete(0, END)
+    for e in entries_b: e.delete(0, END)
+    for e in entries_x:
+        e.config(state="normal"); e.delete(0, END); e.config(state="readonly")
+
+def calcular_integral_simpson(coefs, a, b, n):
+    
+    h = (b - a) / n
+    suma_impares = 0.0
+    suma_pares = 0.0
+    
+    for i in range(1, n):
+        x_actual = a + i * h
+        if i % 2 == 0:
+            suma_pares += eval_polinomio(coefs, x_actual)
+        else:
+            suma_impares += eval_polinomio(coefs, x_actual)
+            
+    # Fórmula de Simpson 1/3 compuesta
+    integral = (h / 3) * (eval_polinomio(coefs, a) + 4 * suma_impares + 2 * suma_pares + eval_polinomio(coefs, b))
+    return integral
+
+def calcular_integral():
+    coefs = obtener_coeficientes()
+    if coefs is None: return
+    
+    try:
+        a = float(entry_a.get().replace(",", "."))
+        b = float(entry_b.get().replace(",", "."))
+        n = int(entry_n.get())
+        
+        # Validación obligatoria: n debe ser par y mayor a 0
+        if n <= 0 or n % 2 != 0:
+            messagebox.showerror("Error", "La cantidad de subintervalos (n) debe ser un número par positivo.")
+            return
+            
+        resultado = calcular_integral_simpson(coefs, a, b, n)
+        
+        res_integral.config(state="normal")
+        res_integral.delete(0, END)
+        res_integral.insert(0, f"{resultado:.6f}")
+        res_integral.config(state="readonly")
+        
+    except ValueError:
+        messagebox.showerror("Error", "Verifique que los límites a, b y la cantidad n sean numéricos.")
+
 def eval_derivada_analitica(coefs, x):
     res = 0.0
     for i, c in enumerate(coefs[:-1]):
@@ -126,12 +256,49 @@ def calcular_derivada():
 def cargar_valores_prueba():
     vals_coefs = [0, 1, 0, -8, 0, 82, -25]
     for e, v in zip(entries_coefs, vals_coefs):
-        e.delete(0, END); e.insert(0, str(v))
+        e.delete(0, END)
+        e.insert(0, str(v))
+    
+    entry_xl.delete(0, END); entry_xl.insert(0, "0")
+    entry_xu.delete(0, END); entry_xu.insert(0, "1")
+    entry_es.delete(0, END); entry_es.insert(0, "0.5")
+    entry_cifras.delete(0, END); entry_cifras.insert(0, "4")
+    entry_max_iter.delete(0, END); entry_max_iter.insert(0, "100")
+    
     entry_x0_der.delete(0, END); entry_x0_der.insert(0, "1")
     entry_h_der.delete(0, END); entry_h_der.insert(0, "0.1")
+    
+    entry_a.delete(0, END); entry_a.insert(0, "0")
+    entry_b.delete(0, END); entry_b.insert(0, "2")
+    entry_n.delete(0, END); entry_n.insert(0, "2")
 
 def borrar_todo():
-    for e in entries_coefs: e.delete(0, END)
+    # Limpiar coeficientes del polinomio
+    for e in entries_coefs: 
+        e.delete(0, END)
+    
+    # Limpiar campos de raíces y resultados
+    for e in [entry_xl, entry_xu, entry_es, entry_cifras, entry_max_iter]:
+        e.delete(0, END)
+    for e in [res_raiz, res_iter, res_ea, res_fr]:
+        e.config(state="normal"); e.delete(0, END); e.config(state="readonly")
+
+    # Limpiar derivada
+    for e in [entry_x0_der, entry_h_der]:
+        e.delete(0, END)
+    res_der.config(state="normal"); res_der.delete(0, END); res_der.config(state="readonly")
+
+    # Limpiar matriz de Gauss y resultados del sistema
+    for fila in entries_A:
+        for e in fila: e.delete(0, END)
+    for e in entries_b: e.delete(0, END)
+    for e in entries_x:
+        e.config(state="normal"); e.delete(0, END); e.config(state="readonly")
+
+    # Limpiar integral
+    for e in [entry_a, entry_b, entry_n]:
+        e.delete(0, END)
+    res_integral.config(state="normal"); res_integral.delete(0, END); res_integral.config(state="readonly")
 
 
 
@@ -141,6 +308,7 @@ raiz = Tk()
 raiz.title("Laboratorio VI.1 - Commit 2")
 raiz.geometry("780x420")
 
+# Panel de Coeficientes del Polinomio
 frame_poli = ttk.LabelFrame(raiz, text="Coeficientes del polinomio (a6 a a0)", padding=5)
 frame_poli.pack(fill="x", padx=10, pady=10)
 entries_coefs = []
@@ -148,7 +316,11 @@ for i in range(7):
     Label(frame_poli, text=f"a{6-i}").grid(row=0, column=i, padx=2)
     e = Entry(frame_poli, width=7, justify="center"); e.grid(row=1, column=i, padx=2)
     entries_coefs.append(e)
-Button(frame_poli, text="Valores de prueba", command=cargar_valores_prueba).grid(row=1, column=7, padx=5)
+
+# Botones de control al lado del polinomio
+Button(frame_poli, text="Valores prueba", command=cargar_valores_prueba, width=12).grid(row=0, column=7, padx=5)
+Button(frame_poli, text="Borrar todo", command=borrar_todo, width=12).grid(row=1, column=7, padx=5)
+
 
 # Panel Raíces
 frame_raiz = ttk.LabelFrame(raiz, text="Cálculo de una raíz (Punto 1)", padding=5)
@@ -193,6 +365,76 @@ entry_h_der = Entry(frame_der, width=8, justify="center"); entry_h_der.grid(row=
 Button(frame_der, text="Calcular", command=calcular_derivada, width=10).grid(row=0, column=4, padx=15)
 Label(frame_der, text="Derivada f'(x0):").grid(row=0, column=5)
 res_der = Entry(frame_der, width=14, state="readonly", justify="center"); res_der.grid(row=0, column=6)
+
+
+frame_sis = ttk.LabelFrame(raiz, text="Resolución de un sistema de 4 ecuaciones (eliminación gaussiana)", padding=5)
+frame_sis.pack(fill="x", padx=10, pady=5)
+
+entries_A = []
+entries_b = []
+entries_x = []
+
+#cabeceras (x1, x2, x3, x4, b)
+for col, texto in enumerate(["x1", "x2", "x3", "x4", "b"]):
+    Label(frame_sis, text=texto).grid(row=0, column=col, padx=5)
+
+#generacion de la grilla 4x4 para A y la columna para b
+for i in range(4):
+    fila_entradas = []
+    for j in range(4):
+        e = Entry(frame_sis, width=6, justify="center")
+        e.grid(row=i+1, column=j, padx=5, pady=2)
+        fila_entradas.append(e)
+    entries_A.append(fila_entradas)
+    
+    #vector b
+    eb = Entry(frame_sis, width=6, justify="center")
+    eb.grid(row=i+1, column=4, padx=5, pady=2)
+    entries_b.append(eb)
+
+#panel derecho: radiobuttons, botones y resultados
+frame_controles = Frame(frame_sis)
+frame_controles.grid(row=1, column=5, rowspan=4, padx=15)
+
+var_pivoteo = StringVar(value="Sin")
+Radiobutton(frame_controles, text="Sin pivoteo", variable=var_pivoteo, value="Sin").pack(anchor="w")
+Radiobutton(frame_controles, text="Con pivoteo parcial", variable=var_pivoteo, value="Con").pack(anchor="w")
+
+Button(frame_controles, text="Calcular", command=calcular_sistema, width=15).pack(pady=2)
+Button(frame_controles, text="Borrar", command=borrar_sistema, width=15).pack(pady=2)
+Button(frame_controles, text="Valores de prueba", command=cargar_prueba_sistema, width=15).pack(pady=2)
+
+frame_resultados = Frame(frame_sis)
+frame_resultados.grid(row=1, column=6, rowspan=4, padx=10)
+
+for i in range(4):
+    Label(frame_resultados, text=f"x{i+1} =").grid(row=i, column=0, sticky="e")
+    ex = Entry(frame_resultados, width=10, state="readonly", justify="center")
+    ex.grid(row=i, column=1, pady=2)
+    entries_x.append(ex)
+
+# Panel Integral (Punto 4)
+frame_int = ttk.LabelFrame(raiz, text="Cálculo de la integral definida (Simpson 1/3 compuesta)", padding=5)
+frame_int.pack(fill="x", padx=10, pady=5)
+
+Label(frame_int, text="Intervalo de integración:  a:").grid(row=0, column=0, padx=5)
+entry_a = Entry(frame_int, width=8, justify="center")
+entry_a.grid(row=0, column=1, padx=5)
+
+Label(frame_int, text="b:").grid(row=0, column=2, padx=5)
+entry_b = Entry(frame_int, width=8, justify="center")
+entry_b.grid(row=0, column=3, padx=5)
+
+Label(frame_int, text="Cantidad de subintervalos (par):").grid(row=1, column=0, columnspan=2, sticky="e", pady=5)
+entry_n = Entry(frame_int, width=8, justify="center")
+entry_n.grid(row=1, column=2, columnspan=2, sticky="w", padx=5)
+
+Button(frame_int, text="Calcular", command=calcular_integral, width=12).grid(row=0, column=4, rowspan=2, padx=30)
+
+Label(frame_int, text="Integral definida:").grid(row=0, column=5, rowspan=2, sticky="e")
+res_integral = Entry(frame_int, width=15, state="readonly", justify="center")
+res_integral.grid(row=0, column=6, rowspan=2, padx=5)
+
 
 cargar_valores_prueba()
 raiz.mainloop()
