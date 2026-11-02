@@ -267,7 +267,10 @@ def cargar_valores_prueba():
     
     entry_x0_der.delete(0, END); entry_x0_der.insert(0, "1")
     entry_h_der.delete(0, END); entry_h_der.insert(0, "0.1")
+<<<<<<< HEAD
     
+=======
+>>>>>>> 1d5fe31a60284a22f50f8dc4a399fc2def9f9cd7
     entry_a.delete(0, END); entry_a.insert(0, "0")
     entry_b.delete(0, END); entry_b.insert(0, "2")
     entry_n.delete(0, END); entry_n.insert(0, "2")
@@ -435,6 +438,9 @@ Label(frame_int, text="Integral definida:").grid(row=0, column=5, rowspan=2, sti
 res_integral = Entry(frame_int, width=15, state="readonly", justify="center")
 res_integral.grid(row=0, column=6, rowspan=2, padx=5)
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 1d5fe31a60284a22f50f8dc4a399fc2def9f9cd7
 cargar_valores_prueba()
 raiz.mainloop()
